@@ -3,7 +3,7 @@ const Constants = require('../constants');
 
 const DrawPoint = {};
 
-DrawPoint.onSetup = function() {
+DrawPoint.onSetup = function(opts) {
   const point = this.newFeature({
     type: Constants.geojsonTypes.FEATURE,
     properties: {},
@@ -23,7 +23,7 @@ DrawPoint.onSetup = function() {
     trash: true
   });
 
-  return { point };
+  return { opts, point };
 };
 
 DrawPoint.stopDrawingAndRemove = function(state) {
@@ -32,6 +32,10 @@ DrawPoint.stopDrawingAndRemove = function(state) {
 };
 
 DrawPoint.onTap = DrawPoint.onClick = function(state, e) {
+  if(e.featureTarget && state.opts && state.opts.types && state.opts.types.indexOf(e.featureTarget._geometry.type)!=-1){
+    this.deleteFeature([state.point.id], { silent: true });
+    return this.changeMode(Constants.modes.SIMPLE_SELECT,{ featureIds: [e.featureTarget.properties.id] });
+  }
   this.updateUIClasses({ mouse: Constants.cursors.MOVE });
   state.point.updateCoordinate('', e.lngLat.lng, e.lngLat.lat);
   this.map.fire(Constants.events.CREATE, {

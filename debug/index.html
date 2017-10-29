@@ -112,15 +112,15 @@ location.hash.replace(/^#/,'').split('/').reduce(function(args, val, i, hash){
 
 
     startPoint.onclick = function() {
-      Draw.changeMode('draw_point');
+      Draw.changeMode('draw_point',{types:['Point']});
     };
 
     startLine.onclick = function() {
-      Draw.changeMode('draw_line_string');
+      Draw.changeMode('draw_line_string',{types:['LineString']});
     };
 
     startPolygon.onclick = function() {
-      Draw.changeMode('draw_polygon');
+      Draw.changeMode('draw_polygon',{types:['Polygon']});
     };
 
   });
@@ -152,7 +152,6 @@ console.log('4.99MB LineStrings - https://d2ad6b4ur7yvpq.cloudfront.net/naturale
 
 console.log('4.03MB Points - https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_10m_admin_1_label_points.geojson');
 
-  (function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();stats.domElement.style.cssText='position:fixed;right:0;top:0;z-index:10000';document.body.appendChild(stats.domElement);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//rawgit.com/mrdoob/stats.js/master/build/stats.min.js';document.head.appendChild(script);})();
 </script>
 </body>
 </html>

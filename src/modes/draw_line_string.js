@@ -62,6 +62,7 @@ DrawLineString.onSetup = function(opts) {
   });
 
   return {
+    opts,
     line,
     currentVertexPosition,
     direction
@@ -72,6 +73,9 @@ DrawLineString.clickAnywhere = function(state, e) {
   if (state.currentVertexPosition > 0 && isEventAtCoordinates(e, state.line.coordinates[state.currentVertexPosition - 1]) ||
       state.direction === 'backwards' && isEventAtCoordinates(e, state.line.coordinates[state.currentVertexPosition + 1])) {
     return this.changeMode(Constants.modes.SIMPLE_SELECT, { featureIds: [state.line.id] });
+  }
+  if(state.currentVertexPosition == 0 && e.featureTarget && state.opts && state.opts.types && state.opts.types.indexOf(e.featureTarget._geometry.type)!=-1){
+    return this.changeMode(Constants.modes.SIMPLE_SELECT,{ featureIds: [e.featureTarget.properties.id] });
   }
   this.updateUIClasses({ mouse: Constants.cursors.ADD });
   state.line.updateCoordinate(state.currentVertexPosition, e.lngLat.lng, e.lngLat.lat);

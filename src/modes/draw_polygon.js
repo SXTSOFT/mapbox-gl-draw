@@ -6,7 +6,7 @@ const createVertex = require('../lib/create_vertex');
 
 const DrawPolygon = {};
 
-DrawPolygon.onSetup = function() {
+DrawPolygon.onSetup = function(opts) {
   const polygon = this.newFeature({
     type: Constants.geojsonTypes.FEATURE,
     properties: {},
@@ -27,6 +27,7 @@ DrawPolygon.onSetup = function() {
   });
 
   return {
+    opts,
     polygon,
     currentVertexPosition: 0
   };
@@ -35,6 +36,9 @@ DrawPolygon.onSetup = function() {
 DrawPolygon.clickAnywhere = function(state, e) {
   if (state.currentVertexPosition > 0 && isEventAtCoordinates(e, state.polygon.coordinates[0][state.currentVertexPosition - 1])) {
     return this.changeMode(Constants.modes.SIMPLE_SELECT, { featureIds: [state.polygon.id] });
+  }
+  if(state.currentVertexPosition == 0 && e.featureTarget && state.opts && state.opts.types && state.opts.types.indexOf(e.featureTarget._geometry.type)!=-1){
+    return this.changeMode(Constants.modes.SIMPLE_SELECT,{ featureIds: [e.featureTarget.properties.id] });
   }
   this.updateUIClasses({ mouse: Constants.cursors.ADD });
   state.polygon.updateCoordinate(`0.${state.currentVertexPosition}`, e.lngLat.lng, e.lngLat.lat);
