@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="x-ua-compatible" content="IE=edge">
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <meta charset=utf-8 />
+  <title>Mapbox GL Draw | Mapbox</title>
+  <link href='/mapbox-gl.css' rel='stylesheet' />
+  <link href='/dist/mapbox-gl-draw.css' rel='stylesheet' />
+  <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.1.0/mapbox-gl-geocoder.css' rel='stylesheer' />
+  <style>
+    body { margin:0; padding:0; }
+    html, body, #map { height: 100%; }
+    .start-draw {
+      width: 237px;
+      position: absolute;
+      left :10px;
+      bottom: 10px;
+      background: #efefef;
+    }
+    .start-draw div {
+      float: right;
+      border: 1px solid #ccc;
+      background: #ddd;
+      padding: 5px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    .toggle {
+      position: absolute;
+      bottom: 20px;
+      right: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id='map'></div>
+<div class='start-draw' >
+  <div id='start-point'>POINT</div>
+  <div id='start-line'>LINE</div>
+  <div id='start-polygon'>POLYGON</div>
+</div>
+<div class='toggle'>
+  <button id='addBtn'>add draw</button>
+  <button id='removeBtn'>remove draw</button>
+  <button id='flipStyleBtn'>change style</button>
+</div>
+<script src='/mapbox-gl.js'></script>
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.1.0/mapbox-gl-geocoder.min.js'></script>
+<script src='/mapbox-gl-draw.js'></script>
+<script type='text/javascript'>
+// making run more like github.com/mapbox/mapbox-gl-js
+//eg http://127.0.0.1:9966/debug/?access_token=<the-token>#13/37.76/-122.42
+var args = location.search.replace(/^\?/,'').split('&').reduce(function(o, param){ var keyvalue=param.split('='); o[keyvalue[0]] = keyvalue[1]; return o; }, {});
+mapboxgl.accessToken = args.access_token || localStorage.accessToken;
+// could work this further but going off the above example
+location.hash.replace(/^#/,'').split('/').reduce(function(args, val, i, hash){
+  switch(i){
+  case 0: args.zoom = val; break;
+  case 1: args.latitude = val; break;
+  case 2:
+    args.longitude = val;
+    if(args.latitude) args.latlng = [val, args.latitude];
+  break;
+  };
+  return args;
+}, args);
+
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'http://tile.ricent.com/style/v1.json'
+  });
+  var canvas = map.getCanvasContainer();
+
+var isCursorOverPoint;
+var bounds = {
+    type:'image',
+    url:'ps.png',
+    "coordinates": [
+        [114.01882908294317, 22.52934017748494],
+        [114.0253317909382, 22.52934017748494],
+        [114.0253317909382, 22.524961446160347],
+        [114.01882908294317, 22.524961446160347]
+    ]
+  }
+  var points = {
+    "type": "FeatureCollection",
+    "features": bounds.coordinates.map(function(lnglat,i){
+      return {
+        "type": "Feature",
+        "properties":{
+          id: i
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": lnglat
+        }
+      }
+    })
+  }
+  function mouseDown() {
+    if (!isCursorOverPoint) return;
+
+    isDragging = true;
+
+    // Set a cursor indicator
+    canvas.style.cursor = 'grab';
+
+    // Mouse events
+    map.on('mousemove', onMove);
+    map.once('mouseup', onUp);
+}
+
+
+function onMove(e) {
+    if (!isDragging) return;
+    var coords = e.lngLat;
+
+    // Set a UI indicator for dragging.
+    canvas.style.cursor = 'grabbing';
+    var features = mapEventToBoundingBox(e,25);
+    if(features && features.length){
+      console.log(features,e);
+      bounds.coordinates[features[0].properties.id][0] = e.lngLat.lng;
+      bounds.coordinates[features[0].properties.id][1] = e.lngLat.lat;
+
+      map.getSource('points').setData(points);
+      map.getSource('img1').setCoordinates(bounds.coordinates);
+    }
+    // Update the Point feature in `geojson` coordinates
+    // and call setData to the source layer `point` on it.
+    //geojson.features[0].geometry.coordinates = [coords.lng, coords.lat];
+
+    //map.getSource('point').setData(geojson);
+}
+
+function onUp(e) {
+    if (!isDragging) return;
+    var coords = e.lngLat;
+
+    // Print the coordinates of where the point had
+    // finished being dragged to on the map.
+    //coordinates.style.display = 'block';
+    //coordinates.innerHTML = 'Longitude: ' + coords.lng + '<br />Latitude: ' + coords.lat;
+    canvas.style.cursor = '';
+    isDragging = false;
+
+    // Unbind mouse events
+    map.off('mousemove', onMove);
+}
+function mapEventToBoundingBox(mapEvent, buffer = 0) {
+  var box = [
+    [mapEvent.point.x - buffer, mapEvent.point.y - buffer],
+    [mapEvent.point.x + buffer, mapEvent.point.y + buffer]
+  ];
+
+  var features = map.queryRenderedFeatures(box, {
+    layers:['point']
+  });
+  return features;
+}
+
+  map.on('load', function() {
+
+
+
+  map.addSource('img1',bounds);
+  map.addSource('points',{
+        "type": "geojson",
+        "data": points
+    });
+  map.addLayer({
+          "id": "overlay",
+          "source": "img1",
+          "type": "raster",
+          "paint": {"raster-opacity": 0.85}
+  });
+  map.addLayer({
+        "id": "point",
+        "type": "circle",
+        "source": "points",
+        "paint": {
+            "circle-radius": 10,
+            "circle-color": "#3887be"
+        }
+  });
+  map.on('mouseenter', 'point', function() {
+        map.setPaintProperty('point', 'circle-color', '#3bb2d0');
+        canvas.style.cursor = 'move';
+        isCursorOverPoint = true;
+        map.dragPan.disable();
+    });
+
+    map.on('mouseleave', 'point', function() {
+        map.setPaintProperty('point', 'circle-color', '#3887be');
+        canvas.style.cursor = '';
+        isCursorOverPoint = false;
+        map.dragPan.enable();
+    });
+    map.on('mousedown', mouseDown);
+
+    map.fitBounds([[-71.516,37.936],[-80.425,46.437]])
+    //map.setZoom(20);
+    // toggle
+    var addButton = document.getElementById('addBtn');
+    var removeButton = document.getElementById('removeBtn');
+    var flipStyleButton = document.getElementById('flipStyleBtn');
+    var currentStyle = 'streets-v9';
+    addButton.onclick = function() {
+      if (drawIsActive) return;
+      drawIsActive = true;
+      map.addControl(Draw, 'bottom-right');
+    }
+    removeButton.onclick = function() {
+      if (!drawIsActive) return;
+      drawIsActive = false;
+      map.removeControl(Draw);
+    }
+    flipStyleButton.onclick = function() {
+      var style = currentStyle === 'streets-v9' ? 'dark-v9' : 'streets-v9';
+      map.setStyle('mapbox://styles/mapbox/' + style);
+      currentStyle = style;
+    }
+
+    var startPoint = document.getElementById('start-point');
+    var startLine = document.getElementById('start-line');
+    var startPolygon = document.getElementById('start-polygon');
+
+
+    startPoint.onclick = function() {
+      Draw.changeMode('draw_point',{types:['Point'],properties:{icon:'airfield-15'}});
+    };
+
+    startLine.onclick = function() {
+      Draw.changeMode('draw_line_string',{types:['LineString']});
+    };
+
+    startPolygon.onclick = function() {
+      console.log('getBounds()',map.getBounds())
+      //Draw.changeMode('draw_polygon',{types:['Polygon']});
+    };
+
+  });
+
+
+
+
+</script>
+</body>
+</html>

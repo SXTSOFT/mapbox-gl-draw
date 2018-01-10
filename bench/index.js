@@ -121,7 +121,34 @@ function createMap(options) {
         style: 'mapbox://styles/mapbox/streets-v8'
     }, options));
 
-    var draw = mapboxgl.Draw(options);
+    var draw = mapboxgl.Draw(util.extend({
+        styles:[
+            {
+                'id': 'highlight-active-points',
+                'type': 'circle',
+                'filter': ['all',
+                  ['==', '$type', 'Point'],
+                  ['==', 'meta', 'feature'],
+                  ['==', 'active', 'true']],
+                'paint': {
+                  'circle-radius': 7,
+                  'circle-color': '#000000'
+                }
+              },
+              {
+                'id': 'points-are-blue',
+                'type': 'circle',
+                'filter': ['all',
+                  ['==', '$type', 'Point'],
+                  ['==', 'meta', 'feature'],
+                  ['==', 'active', 'false']],
+                'paint': {
+                  'circle-radius': 5,
+                  'circle-color': '#000088'
+                }
+              } 
+        ]
+    },options));
 
     map.addControl(draw);
 
